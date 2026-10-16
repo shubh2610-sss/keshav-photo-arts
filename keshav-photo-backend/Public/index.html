@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>KESHAV PHOTO ARTS - Studio Suite</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Inline Pure JS QR Code Generator -->
+  <script>
+    !function(q){var QRCode=function(el,opt){this._el=el;this._opt=typeof opt=="string"?{text:opt}:opt;this.makeCode(this._opt.text)};QRCode.prototype.makeCode=function(text){var url="https://api.qrserver.com/v1/create-qr-code/?size=150x150&data="+encodeURIComponent(text);this._el.innerHTML='<img src="'+url+'" alt="UPI QR" class="mx-auto rounded-lg shadow-sm border border-slate-200 w-24 h-24">';};q.QRCode=QRCode}(window);
+  </script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+    .tab-active { border-bottom: 2px solid #6366f1; color: #818cf8; }
+    @media print {
+      @page {
+        size: A5 portrait;
+        margin: 5mm;
+      }
+      body * { visibility: hidden; }
+      #invoicePreview, #invoicePreview * { visibility: visible; }
+      #invoicePreview {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        max-width: 148mm;
+        padding: 6mm;
+        display: block !important;
+        background: white !important;
+        color: black !important;
+        box-sizing: border-box;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between">
+
+  <!-- LOGIN MODAL -->
+  <div id="loginModal" class="fixed inset-0 bg-slate-950/95 backdrop-blur-md flex items-center justify-center z-50">
+    <div class="bg-slate-900 border border-slate-800 p-8 rounded-2xl w-full max-w-md shadow-2xl space-y-6">
+      <div class="text-center space-y-2">
+        <div class="w-16 h-16 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-2xl flex items-center justify-center text-3xl mx-auto shadow-lg">📸</div>
+        <h2 class="text-xl font-black text-white tracking-tight">KESHAV PHOTO ARTS</h2>
+        <p class="text-xs text-slate-400">Enter Admin Credentials to Access Studio Suite</p>
+      </div>
+
+      <div id="loginError" class="hidden text-xs text-rose-400 bg-rose-500/10 p-3 rounded-lg border border-rose-500/20 text-center font-medium">
+        Invalid Username or Password!
+      </div>
+
+      <form onsubmit="handleLogin(event)" class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Username</label>
+          <input type="text" id="loginUser" placeholder="admin" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1 uppercase tracking-wider">Password</label>
+          <input type="password" id="loginPass" placeholder="••••" required class="w-full bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm text-white focus:outline-none focus:border-indigo-500 transition">
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg text-sm transition shadow-lg shadow-indigo-600/25">
+          🔒 Unlock Billing System
+        </button>
+      </form>
+      <p class="text-[11px] text-slate-500 text-center">Default: <strong>admin</strong> / <strong>1234</strong></p>
+    </div>
+  </div>
+
+  <!-- MAIN APP CONTAINER -->
+  <div id="appContainer" class="hidden">
+    <!-- Header -->
+    <header class="bg-slate-900 border-b border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center sticky top-0 z-40">
+      <div class="flex items-center gap-3">
+        <div id="appHeaderLogoContainer" class="bg-gradient-to-tr from-indigo-600 to-violet-600 p-2 rounded-xl text-2xl shadow-lg flex items-center justify-center overflow-hidden w-12 h-12">
+          <span id="appHeaderLogoFallback">📸</span>
+          <img id="appHeaderLogoImg" src="" class="w-full h-full object-cover hidden" alt="Studio Logo">
+        </div>
+        <div>
+          <h1 class="text-xl font-black tracking-tight text-white flex items-center gap-2">
+            KESHAV PHOTO ARTS <span class="bg-emerald-500/10 text-emerald-400 text-xs font-semibold px-2 py-0.5 rounded border border-emerald-500/20">STUDIO SUITE</span>
+          </h1>
+          <p class="text-xs text-slate-400">Porbandar, Gujarat • Digital Studio & Framing</p>
+        </div>
+      </div>
+      
+      <div class="flex items-center gap-6 mt-3 sm:mt-0">
+        <nav class="flex gap-6 text-sm font-medium text-slate-400">
+          <button onclick="switchTab('billing')" id="tab-billing" class="tab-active py-2 transition">Billing & Estimates</button>
+          <button onclick="switchTab('history')" id="tab-history" class="py-2 hover:text-slate-200 transition">Saved Bills (<span id="badgeCount">0</span>)</button>
+          <button onclick="switchTab('settings')" id="tab-settings" class="py-2 hover:text-slate-200 transition">Shop Settings & Logo</button>
+        </nav>
+        <button onclick="logout()" class="text-xs bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 px-3 py-1.5 rounded-lg transition font-semibold">
+          🚪 Logout
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto p-4 md:p-6">
+
+      <!-- TAB 1: BILLING MODULE -->
+      <section id="view-billing" class="space-y-6">
+        
+        <!-- Metrics -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+            <p class="text-xs font-medium text-slate-400">Total Billed</p>
+            <h3 id="statRevenue" class="text-2xl font-bold text-indigo-400 mt-1">₹0.00</h3>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+            <p class="text-xs font-medium text-slate-400">Advance Received</p>
+            <h3 id="statAdvance" class="text-2xl font-bold text-emerald-400 mt-1">₹0.00</h3>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+            <p class="text-xs font-medium text-slate-400">Pending Balances Due</p>
+            <h3 id="statPending" class="text-2xl font-bold text-amber-400 mt-1">₹0.00</h3>
+          </div>
+          <div class="bg-slate-900 border border-slate-800 p-4 rounded-xl">
+            <p class="text-xs font-medium text-slate-400">Saved Bills</p>
+            <h3 id="statInvoicesCount" class="text-2xl font-bold text-white mt-1">0 Bills</h3>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          
+          <!-- Form -->
+          <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-6">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3">
+              <h2 class="text-sm font-bold uppercase tracking-wider text-indigo-400">1. Client Details</h2>
+              <select id="documentType" class="bg-slate-800 border border-slate-700 text-xs text-slate-200 rounded-lg p-1.5 focus:outline-none">
+                <option value="Invoice">Studio Bill</option>
+                <option value="Quotation">Estimate / Quotation</option>
+              </select>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <input type="text" id="clientName" placeholder="Client Name" class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none">
+              <input type="tel" id="clientPhone" placeholder="WhatsApp / Mobile Number" class="bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none">
+            </div>
+
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 pt-2">
+              <h2 class="text-sm font-bold uppercase tracking-wider text-indigo-400">2. Photography Services & Items</h2>
+              <button onclick="addItemRow()" class="bg-indigo-600 hover:bg-indigo-500 text-xs text-white px-3 py-1.5 rounded-lg font-semibold transition">+ Add Custom Item</button>
+            </div>
+
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm text-slate-300">
+                <thead class="bg-slate-950/60 text-slate-400 text-xs uppercase border-b border-slate-800">
+                  <tr>
+                    <th class="p-2">Item / Service Description</th>
+                    <th class="p-2 w-20">Qty</th>
+                    <th class="p-2 w-32">Rate (₹)</th>
+                    <th class="p-2 w-32 text-right">Total (₹)</th>
+                    <th class="p-2 w-10"></th>
+                  </tr>
+                </thead>
+                <tbody id="itemsContainer" class="divide-y divide-slate-800/60"></tbody>
+              </table>
+            </div>
+
+            <div class="border-t border-slate-800 pt-4 space-y-3">
+              <h2 class="text-sm font-bold uppercase tracking-wider text-indigo-400">3. Payment Details</h2>
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Event / Shoot Date</label>
+                  <input type="date" id="eventDate" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white focus:border-indigo-500 focus:outline-none">
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Payment Mode</label>
+                  <select id="paymentMode" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white focus:border-indigo-500 focus:outline-none">
+                    <option value="UPI / GPay">UPI / GPay / PhonePe</option>
+                    <option value="Cash">Cash</option>
+                    <option value="Cheque">Cheque</option>
+                    <option value="Due / Pending">Due / Pending</option>
+                    <option value="Bank Transfer">Bank Transfer / NEFT</option>
+                  </select>
+                </div>
+                <div>
+                  <label class="block text-xs text-slate-400 mb-1">Advance Token Paid (₹)</label>
+                  <input type="number" id="advancePaid" value="0" oninput="calculateTotals()" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2 text-xs text-white focus:border-indigo-500 focus:outline-none">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Summary & QR Box -->
+          <div class="lg:col-span-4 space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4 shadow-xl">
+              <h2 class="text-sm font-bold uppercase tracking-wider text-indigo-400 border-b border-slate-800 pb-2">Bill Summary & Dynamic QR</h2>
+              
+              <div class="flex justify-between text-base font-extrabold text-white border-b border-slate-800 pb-2">
+                <span>Grand Total:</span>
+                <span id="summaryTotal" class="text-indigo-400">₹0.00</span>
+              </div>
+
+              <div class="bg-slate-950 rounded-xl p-3 border border-slate-800 space-y-1.5 text-xs">
+                <div class="flex justify-between text-emerald-400 font-semibold">
+                  <span>Advance Paid:</span>
+                  <span id="summaryAdvance">₹0.00</span>
+                </div>
+                <div class="flex justify-between text-amber-400 font-extrabold text-sm">
+                  <span>Balance Due:</span>
+                  <span id="summaryBalance">₹0.00</span>
+                </div>
+              </div>
+
+              <div class="bg-white rounded-xl p-4 text-slate-900 text-center space-y-2">
+                <p class="text-[11px] font-bold uppercase tracking-wider text-slate-600">Scan Balance via UPI</p>
+                <div id="qrcode" class="flex justify-center my-2"></div>
+                <p class="text-xs font-black text-indigo-900" id="qrAmountLabel">Amount: ₹0.00</p>
+              </div>
+
+              <div class="space-y-2 pt-2">
+                <button onclick="saveAndPrintInvoice()" class="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2.5 rounded-lg transition shadow-lg shadow-indigo-600/20 text-sm flex items-center justify-center gap-2">
+                  🖨️ Save Bill & Print A5 PDF
+                </button>
+                <button onclick="resetForm()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-lg transition text-xs flex items-center justify-center gap-2 border border-slate-700">
+                  🔄 Clear Current Bill
+                </button>
+                <button onclick="sendWhatsApp()" class="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-bold py-2.5 rounded-lg transition text-sm flex items-center justify-center gap-2">
+                  💬 Send Bill on WhatsApp
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- TAB 2: INVOICE HISTORY WITH SEARCH & DUE TOGGLE -->
+      <section id="view-history" class="hidden space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+          <div class="flex flex-wrap justify-between items-center gap-3">
+            <h2 class="text-lg font-bold text-white">Saved Studio Bills</h2>
+            <div class="flex items-center gap-3 w-full sm:w-auto">
+              <!-- Search Bar -->
+              <input type="text" id="searchInput" oninput="renderHistoryTable()" placeholder="🔍 Search name, phone, due, cheque, or bill #..." class="bg-slate-950 border border-slate-800 text-xs text-white rounded-lg px-3 py-2 w-full sm:w-64 focus:outline-none focus:border-indigo-500">
+              <button onclick="clearHistory()" class="text-xs text-rose-400 hover:text-rose-300 border border-rose-500/20 bg-rose-500/10 px-3 py-2 rounded-lg transition whitespace-nowrap">Clear All</button>
+            </div>
+          </div>
+
+          <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-slate-300">
+              <thead class="bg-slate-950 text-slate-400 text-xs uppercase border-b border-slate-800">
+                <tr>
+                  <th class="p-3">Bill #</th>
+                  <th class="p-3">Date</th>
+                  <th class="p-3">Client Name</th>
+                  <th class="p-3">Phone</th>
+                  <th class="p-3">Mode</th>
+                  <th class="p-3">Total Amount</th>
+                  <th class="p-3">Balance Due</th>
+                  <th class="p-3 text-center">Status</th>
+                  <th class="p-3 text-center">Action / Download</th>
+                </tr>
+              </thead>
+              <tbody id="historyTableBody" class="divide-y divide-slate-800">
+                <!-- Rendered dynamically -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- TAB 3: SETTINGS, LOGO & BACKUP -->
+      <section id="view-settings" class="hidden space-y-6">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 max-w-2xl mx-auto space-y-6">
+          <h2 class="text-lg font-bold text-white border-b border-slate-800 pb-3">Studio, Password & Backup Settings</h2>
+          
+          <div>
+            <label class="block text-sm text-slate-300 mb-2">Upload Shop Logo (Appears on Bills)</label>
+            <input type="file" id="logoUploader" accept="image/*" onchange="handleLogoUpload(event)" class="bg-slate-950 border border-slate-800 text-xs text-slate-300 rounded-lg p-2.5 w-full">
+            <div id="settingsLogoPreview" class="mt-3 w-20 h-20 bg-slate-950 border border-slate-800 rounded-lg flex items-center justify-center overflow-hidden">
+              <span id="settingsLogoFallback" class="text-2xl">📸</span>
+              <img id="settingsLogoImg" src="" class="w-full h-full object-cover hidden" alt="Logo Preview">
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Shop Name</label>
+              <input type="text" id="settingShopName" value="KESHAV PHOTO ARTS" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Studio Address & Phone</label>
+              <input type="text" id="settingAddress" value="Main Market Road, Porbandar, Gujarat | Mo: 9876543210" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white">
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">Studio UPI ID (For Payment QR)</label>
+              <input type="text" id="settingUPI" value="keshavphoto@upi" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white">
+            </div>
+            <div class="border-t border-slate-800 pt-3">
+              <label class="block text-xs text-amber-400 font-semibold mb-1">Change Admin Password</label>
+              <input type="password" id="settingPass" placeholder="Enter new password" class="w-full bg-slate-950 border border-slate-800 rounded-lg p-2.5 text-sm text-white focus:border-indigo-500 focus:outline-none">
+            </div>
+          </div>
+
+          <button onclick="saveSettings()" class="bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-2 px-6 rounded-lg text-sm w-full">Save Studio Settings</button>
+
+          <!-- BACKUP & RESTORE MODULE -->
+          <div class="border-t border-slate-800 pt-6 space-y-3">
+            <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">💾 Data Backup & Restore</h3>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <button onclick="exportBackup()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold py-2.5 px-4 rounded-lg text-xs transition flex items-center justify-center gap-2">
+                📥 Export Backup (.json)
+              </button>
+              <label class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2.5 px-4 rounded-lg text-xs transition border border-slate-700 flex items-center justify-center gap-2 cursor-pointer">
+                📤 Import Backup File
+                <input type="file" accept=".json" onchange="importBackup(event)" class="hidden">
+              </label>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- PRINTABLE A5 INVOICE TEMPLATE -->
+  <div id="invoicePreview" class="bg-white text-slate-900 p-5 max-w-[148mm] mx-auto rounded-lg hidden text-xs leading-tight">
+    <div class="flex justify-between items-start border-b-2 border-slate-900 pb-3 mb-3">
+      <div class="flex items-center gap-2">
+        <div id="pdfLogoContainer" class="w-10 h-10 bg-slate-900 rounded flex items-center justify-center text-white text-lg font-bold overflow-hidden">
+          <span id="pdfLogoFallback">📸</span>
+          <img id="pdfLogoImg" src="" class="w-full h-full object-cover hidden" alt="PDF Logo">
+        </div>
+        <div>
+          <h1 id="pdfShopName" class="text-base font-black text-slate-900 leading-none">KESHAV PHOTO ARTS</h1>
+          <p class="text-[10px] text-slate-600 mt-0.5">Digital Studio, Framing & Photography</p>
+          <p id="pdfShopAddress" class="text-[9px] text-slate-500">Main Market Road, Porbandar, Gujarat</p>
+        </div>
+      </div>
+      <div class="text-right">
+        <span id="pdfDocType" class="bg-slate-900 text-white text-[9px] font-bold px-2 py-0.5 uppercase rounded">STUDIO BILL</span>
+        <p class="text-[10px] text-slate-700 mt-1">Bill #: <strong id="pdfInvNum">KPA-1001</strong></p>
+        <p class="text-[9px] text-slate-500">Date: <span id="pdfInvDate"></span></p>
+      </div>
+    </div>
+
+    <div class="bg-slate-100 rounded p-2 mb-3 flex justify-between text-[10px] border border-slate-200">
+      <div>
+        <p class="text-slate-500 font-bold uppercase text-[8px]">Client Details:</p>
+        <p id="pdfClientName" class="font-extrabold text-slate-900 text-xs">-</p>
+        <p id="pdfClientPhone" class="text-slate-700 text-[10px]">-</p>
+      </div>
+    </div>
+
+    <table class="w-full text-left text-[10px] mb-4 border-collapse">
+      <thead>
+        <tr class="bg-slate-900 text-white uppercase text-[9px]">
+          <th class="p-1.5">Item Description</th>
+          <th class="p-1.5 text-center">Qty</th>
+          <th class="p-1.5 text-right">Rate</th>
+          <th class="p-1.5 text-right">Total</th>
+        </tr>
+      </thead>
+      <tbody id="pdfTableBody" class="divide-y divide-slate-200 border-b border-slate-200"></tbody>
+    </table>
+
+    <div class="flex justify-between items-start text-[10px] border-t border-slate-200 pt-2">
+      <div class="w-1/2 space-y-1">
+        <p><strong>Payment Mode:</strong> <span id="pdfPaymentMode">Cash</span></p>
+        <p class="text-[8px] text-slate-500 italic">Thank you for choosing Keshav Photo Arts!</p>
+      </div>
+      <div class="w-36 space-y-0.5 text-right">
+        <div class="flex justify-between font-bold border-t border-slate-900 pt-0.5 text-xs"><span>Grand Total:</span><span id="pdfTotal">₹0.00</span></div>
+        <div class="flex justify-between text-emerald-700 font-semibold"><span>Advance Paid:</span><span id="pdfAdvance">₹0.00</span></div>
+        <div class="flex justify-between text-amber-700 font-bold border-t border-slate-300 pt-0.5"><span>Balance Due:</span><span id="pdfBalance">₹0.00</span></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let savedLogo = localStorage.getItem('keshavLogo') || '';
+    let adminPassword = localStorage.getItem('keshavAdminPass') || '1234';
+
+    document.addEventListener("DOMContentLoaded", () => {
+      checkLoginSession();
+      document.getElementById("pdfInvDate").innerText = new Date().toLocaleDateString('en-IN');
+      document.getElementById("eventDate").valueAsDate = new Date();
+      loadLogo();
+      calculateTotals();
+      renderHistoryTable();
+    });
+
+    function checkLoginSession() {
+      if (sessionStorage.getItem('keshavLoggedIn') === 'true') {
+        document.getElementById("loginModal").classList.add("hidden");
+        document.getElementById("appContainer").classList.remove("hidden");
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const u = document.getElementById("loginUser").value.trim();
+      const p = document.getElementById("loginPass").value.trim();
+
+      if (u === "admin" && p === adminPassword) {
+        sessionStorage.setItem('keshavLoggedIn', 'true');
+        document.getElementById("loginModal").classList.add("hidden");
+        document.getElementById("appContainer").classList.remove("hidden");
+        document.getElementById("loginError").classList.add("hidden");
+      } else {
+        document.getElementById("loginError").classList.remove("hidden");
+      }
+    }
+
+    function logout() {
+      sessionStorage.removeItem('keshavLoggedIn');
+      location.reload();
+    }
+
+    function switchTab(tab) {
+      ['billing', 'history', 'settings'].forEach(t => {
+        document.getElementById("view-" + t).classList.add("hidden");
+        document.getElementById("tab-" + t).classList.remove("tab-active");
+      });
+      document.getElementById("view-" + tab).classList.remove("hidden");
+      document.getElementById("tab-" + tab).classList.add("tab-active");
+      if(tab === 'history') renderHistoryTable();
+    }
+
+    function handleLogoUpload(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          savedLogo = event.target.result;
+          localStorage.setItem('keshavLogo', savedLogo);
+          loadLogo();
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+
+    function loadLogo() {
+      if (savedLogo) {
+        document.getElementById("appHeaderLogoImg").src = savedLogo;
+        document.getElementById("appHeaderLogoImg").classList.remove("hidden");
+        document.getElementById("appHeaderLogoFallback").classList.add("hidden");
+
+        document.getElementById("settingsLogoImg").src = savedLogo;
+        document.getElementById("settingsLogoImg").classList.remove("hidden");
+        document.getElementById("settingsLogoFallback").classList.add("hidden");
+
+        document.getElementById("pdfLogoImg").src = savedLogo;
+        document.getElementById("pdfLogoImg").classList.remove("hidden");
+        document.getElementById("pdfLogoFallback").classList.add("hidden");
+      }
+    }
+
+    function addItemRow(desc = "", qty = 1, rate = 0) {
+      const container = document.getElementById("itemsContainer");
+      const row = document.createElement("tr");
+      row.className = "item-row";
+      row.innerHTML = `
+        <td class="p-2"><input type="text" value="${desc}" placeholder="Item / Service Name" class="w-full bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white item-desc focus:border-indigo-500 focus:outline-none"></td>
+        <td class="p-2"><input type="number" value="${qty}" min="1" oninput="calculateTotals()" class="w-16 bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white item-qty"></td>
+        <td class="p-2"><input type="number" value="${rate}" oninput="calculateTotals()" class="w-28 bg-slate-950 border border-slate-800 rounded p-1.5 text-xs text-white item-rate"></td>
+        <td class="p-2 text-right font-semibold text-white item-total">₹0.00</td>
+        <td class="p-2 text-center">
+          <button onclick="this.closest('tr').remove(); calculateTotals();" class="text-rose-400 hover:text-rose-300 font-bold text-base">&times;</button>
+        </td>
+      `;
+      container.appendChild(row);
+      calculateTotals();
+    }
+
+    function resetForm() {
+      document.getElementById("clientName").value = "";
+      document.getElementById("clientPhone").value = "";
+      document.getElementById("advancePaid").value = "0";
+      document.getElementById("itemsContainer").innerHTML = "";
+      calculateTotals();
+    }
+
+    function calculateTotals() {
+      let totalSum = 0;
+
+      document.querySelectorAll(".item-row").forEach(row => {
+        const qty = parseFloat(row.querySelector(".item-qty").value) || 0;
+        const rate = parseFloat(row.querySelector(".item-rate").value) || 0;
+        const lineTotal = qty * rate;
+
+        row.querySelector(".item-total").innerText = "₹" + lineTotal.toFixed(2);
+        totalSum += lineTotal;
+      });
+
+      const advance = parseFloat(document.getElementById("advancePaid").value) || 0;
+      const balance = Math.max(0, totalSum - advance);
+
+      document.getElementById("summaryTotal").innerText = "₹" + totalSum.toFixed(2);
+      document.getElementById("summaryAdvance").innerText = "₹" + advance.toFixed(2);
+      document.getElementById("summaryBalance").innerText = "₹" + balance.toFixed(2);
+
+      const upiId = document.getElementById("settingUPI").value || "keshavphoto@upi";
+      const upiString = `upi://pay?pa=${upiId}&pn=Keshav%20Photo%20Arts&am=${balance.toFixed(2)}&cu=INR`;
+      
+      const qrContainer = document.getElementById("qrcode");
+      qrContainer.innerHTML = "";
+      document.getElementById("qrAmountLabel").innerText = "Locked Amount: ₹" + balance.toFixed(2);
+
+      new QRCode(qrContainer, { text: upiString });
+    }
+
+    function sendWhatsApp() {
+      const name = document.getElementById("clientName").value.trim() || "Valued Client";
+      const phone = document.getElementById("clientPhone").value.trim();
+      const total = document.getElementById("summaryTotal").innerText;
+      const advance = document.getElementById("summaryAdvance").innerText;
+      const balance = document.getElementById("summaryBalance").innerText;
+
+      if(!phone) {
+        alert("Please enter a valid WhatsApp Mobile Number.");
+        return;
+      }
+
+      const msg = `Hello ${name},\n\nThank you for choosing *KESHAV PHOTO ARTS*! 📸\n\n*Billing Summary:*\nTotal Amount: ${total}\nAdvance Paid: ${advance}\n*Pending Balance Due: ${balance}*\n\nPlease pay the balance via UPI ID: ${document.getElementById("settingUPI").value}\n\nHave a great day!`;
+      
+      window.open(`https://wa.me/91${phone}?text=${encodeURIComponent(msg)}`, '_blank');
+    }
+
+    function saveAndPrintInvoice() {
+      calculateTotals();
+
+      const itemRows = document.querySelectorAll(".item-row");
+      if (itemRows.length === 0) {
+        alert("Please add at least one item before saving or printing!");
+        return;
+      }
+
+      const invNum = "KPA-" + Math.floor(1000 + Math.random() * 9000);
+      const clientName = document.getElementById("clientName").value.trim() || "Walk-in Customer";
+      const clientPhone = document.getElementById("clientPhone").value.trim() || "-";
+      const totalStr = document.getElementById("summaryTotal").innerText;
+      const balanceStr = document.getElementById("summaryBalance").innerText;
+      const advanceVal = parseFloat(document.getElementById("advancePaid").value) || 0;
+      const selectedPaymentMode = document.getElementById("paymentMode").value;
+      
+      const numBal = parseFloat(balanceStr.replace(/[^0-9.-]+/g, "")) || 0;
+      const initialStatus = (numBal === 0 && selectedPaymentMode !== "Due / Pending") ? "Paid" : "Due";
+
+      const itemsList = [];
+      itemRows.forEach(row => {
+        itemsList.push({
+          desc: row.querySelector(".item-desc").value || "Service",
+          qty: parseFloat(row.querySelector(".item-qty").value) || 1,
+          rate: parseFloat(row.querySelector(".item-rate").value) || 0
+        });
+      });
+
+      const invoiceData = {
+        invNum: invNum,
+        date: new Date().toLocaleDateString('en-IN'),
+        clientName: clientName,
+        clientPhone: clientPhone,
+        paymentMode: selectedPaymentMode,
+        total: totalStr,
+        advance: "₹" + advanceVal.toFixed(2),
+        balance: balanceStr,
+        originalBalance: balanceStr,
+        status: initialStatus,
+        items: itemsList
+      };
+
+      try {
+        let savedInvoices = JSON.parse(localStorage.getItem('keshavInvoices_nongst')) || [];
+        savedInvoices.unshift(invoiceData);
+        localStorage.setItem('keshavInvoices_nongst', JSON.stringify(savedInvoices));
+      } catch (err) {
+        alert("Storage error: " + err.message);
+        return;
+      }
+
+      renderHistoryTable();
+
+      document.getElementById("pdfInvNum").innerText = invNum;
+      document.getElementById("pdfClientName").innerText = clientName;
+      document.getElementById("pdfClientPhone").innerText = clientPhone;
+      document.getElementById("pdfPaymentMode").innerText = selectedPaymentMode;
+
+      const pdfTable = document.getElementById("pdfTableBody");
+      pdfTable.innerHTML = "";
+
+      let grandTotal = 0;
+
+      itemsList.forEach(item => {
+        const lineTotal = item.qty * item.rate;
+        grandTotal += lineTotal;
+
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-1.5">${item.desc}</td>
+          <td class="p-1.5 text-center">${item.qty}</td>
+          <td class="p-1.5 text-right">₹${item.rate.toFixed(2)}</td>
+          <td class="p-1.5 text-right font-medium">₹${lineTotal.toFixed(2)}</td>
+        `;
+        pdfTable.appendChild(tr);
+      });
+
+      document.getElementById("pdfTotal").innerText = "₹" + grandTotal.toFixed(2);
+      document.getElementById("pdfAdvance").innerText = "₹" + advanceVal.toFixed(2);
+      document.getElementById("pdfBalance").innerText = "₹" + (grandTotal - advanceVal).toFixed(2);
+
+      window.print();
+    }
+
+    function downloadHistoryPDF(invNum) {
+      let savedInvoices = JSON.parse(localStorage.getItem('keshavInvoices_nongst')) || [];
+      const inv = savedInvoices.find(i => i.invNum === invNum);
+      if (!inv) return;
+
+      document.getElementById("pdfInvNum").innerText = inv.invNum;
+      document.getElementById("pdfInvDate").innerText = inv.date;
+      document.getElementById("pdfClientName").innerText = inv.clientName;
+      document.getElementById("pdfClientPhone").innerText = inv.clientPhone;
+      document.getElementById("pdfPaymentMode").innerText = inv.paymentMode || "Cash";
+
+      const pdfTable = document.getElementById("pdfTableBody");
+      pdfTable.innerHTML = "";
+
+      if (inv.items && inv.items.length > 0) {
+        inv.items.forEach(item => {
+          const lineTotal = item.qty * item.rate;
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td class="p-1.5">${item.desc}</td>
+            <td class="p-1.5 text-center">${item.qty}</td>
+            <td class="p-1.5 text-right">₹${item.rate.toFixed(2)}</td>
+            <td class="p-1.5 text-right font-medium">₹${lineTotal.toFixed(2)}</td>
+          `;
+          pdfTable.appendChild(tr);
+        });
+      } else {
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="p-1.5">Studio Photography & Printing Service</td>
+          <td class="p-1.5 text-center">1</td>
+          <td class="p-1.5 text-right">${inv.total}</td>
+          <td class="p-1.5 text-right font-medium">${inv.total}</td>
+        `;
+        pdfTable.appendChild(tr);
+      }
+
+      document.getElementById("pdfTotal").innerText = inv.total;
+      document.getElementById("pdfAdvance").innerText = inv.advance || "₹0.00";
+      document.getElementById("pdfBalance").innerText = inv.balance;
+
+      window.print();
+    }
+
+    function setStatus(invNum, newStatus) {
+      let savedInvoices = JSON.parse(localStorage.getItem('keshavInvoices_nongst')) || [];
+      const invoice = savedInvoices.find(inv => inv.invNum === invNum);
+      if (invoice) {
+        invoice.status = newStatus;
+        if (newStatus === "Paid") {
+          if (!invoice.originalBalance) invoice.originalBalance = invoice.balance;
+          invoice.balance = "₹0.00";
+        } else {
+          invoice.balance = invoice.originalBalance || invoice.balance;
+        }
+        localStorage.setItem('keshavInvoices_nongst', JSON.stringify(savedInvoices));
+        renderHistoryTable();
+      }
+    }
+
+    function deleteBill(invNum) {
+      if (confirm(`Are you sure you want to delete bill ${invNum}?`)) {
+        let savedInvoices = JSON.parse(localStorage.getItem('keshavInvoices_nongst')) || [];
+        savedInvoices = savedInvoices.filter(inv => inv.invNum !== invNum);
+        localStorage.setItem('keshavInvoices_nongst', JSON.stringify(savedInvoices));
+        renderHistoryTable();
+      }
+    }
+
+    function renderHistoryTable() {
+      const tbody = document.getElementById("historyTableBody");
+      if(!tbody) return;
+      tbody.innerHTML = "";
+
+      let savedInvoices = [];
+      try {
+        savedInvoices = JSON.parse(localStorage.getItem('keshavInvoices_nongst')) || [];
+      } catch(e) { savedInvoices = []; }
+
+      const query = (document.getElementById("searchInput")?.value || "").toLowerCase().trim();
+
+      let totalRevenue = 0;
+      let totalPending = 0;
+
+      savedInvoices.forEach((inv) => {
+        const isPaid = inv.status === "Paid";
+        const mode = inv.paymentMode || "Cash";
+        const matchesQuery = !query || 
+          inv.clientName.toLowerCase().includes(query) || 
+          inv.clientPhone.toLowerCase().includes(query) || 
+          inv.invNum.toLowerCase().includes(query) ||
+          mode.toLowerCase().includes(query) ||
+          (query === "due" && !isPaid) ||
+          (query === "paid" && isPaid);
+
+        if (matchesQuery) {
+          const statusBadge = isPaid
+            ? `<span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1 rounded-md text-xs font-semibold">✅ Paid</span>`
+            : `<span class="bg-amber-500/10 text-amber-400 border border-amber-500/20 px-2.5 py-1 rounded-md text-xs font-semibold">⏳ Due</span>`;
+
+          const toggleButton = isPaid
+            ? `<button onclick="setStatus('${inv.invNum}', 'Due')" class="text-amber-400 hover:text-amber-300 bg-amber-500/10 hover:bg-amber-500/20 px-2 py-1 rounded-md border border-amber-500/20 text-xs transition">Mark as Due</button>`
+            : `<button onclick="setStatus('${inv.invNum}', 'Paid')" class="text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 hover:bg-emerald-500/20 px-2 py-1 rounded-md border border-emerald-500/20 text-xs transition">Mark as Paid</button>`;
+
+          const tr = document.createElement("tr");
+          tr.className = "hover:bg-slate-800/50";
+          tr.innerHTML = `
+            <td class="p-3 font-bold text-indigo-400">${inv.invNum}</td>
+            <td class="p-3 text-xs text-slate-400">${inv.date}</td>
+            <td class="p-3 font-medium text-white">${inv.clientName}</td>
+            <td class="p-3 text-slate-300">${inv.clientPhone}</td>
+            <td class="p-3 text-xs text-slate-400">${mode}</td>
+            <td class="p-3 font-semibold text-white">${inv.total}</td>
+            <td class="p-3 font-bold ${isPaid ? 'text-emerald-400 line-through opacity-70' : 'text-amber-400'}">${inv.balance}</td>
+            <td class="p-3 text-center">${statusBadge}</td>
+            <td class="p-3 text-center flex items-center justify-center gap-1.5">
+              <button onclick="downloadHistoryPDF('${inv.invNum}')" class="text-indigo-400 hover:text-indigo-300 bg-indigo-500/10 hover:bg-indigo-500/20 px-2 py-1 rounded-md border border-indigo-500/20 text-xs font-medium transition" title="Print/Download A5 PDF">
+                📥 PDF
+              </button>
+              ${toggleButton}
+              <button onclick="deleteBill('${inv.invNum}')" class="text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 px-2 py-1 rounded-md border border-rose-500/20 text-xs transition" title="Delete Bill">
+                🗑️
+              </button>
+            </td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        const numTotal = parseFloat((inv.total || "0").replace(/[^0-9.-]+/g, "")) || 0;
+        const numBal = parseFloat((inv.balance || "0").replace(/[^0-9.-]+/g, "")) || 0;
+
+        totalRevenue += numTotal;
+        if (!isPaid) totalPending += numBal;
+      });
+
+      document.getElementById("statInvoicesCount").innerText = savedInvoices.length + " Bills";
+      document.getElementById("badgeCount").innerText = savedInvoices.length;
+      document.getElementById("statRevenue").innerText = "₹" + totalRevenue.toFixed(2);
+      document.getElementById("statPending").innerText = "₹" + totalPending.toFixed(2);
+    }
+
+    function clearHistory() {
+      if(confirm("Are you sure you want to clear all saved bills?")) {
+        localStorage.removeItem('keshavInvoices_nongst');
+        renderHistoryTable();
+      }
+    }
+
+    function saveSettings() {
+      document.getElementById("pdfShopName").innerText = document.getElementById("settingShopName").value;
+      document.getElementById("pdfShopAddress").innerText = document.getElementById("settingAddress").value;
+
+      const newPass = document.getElementById("settingPass").value.trim();
+      if (newPass) {
+        adminPassword = newPass;
+        localStorage.setItem('keshavAdminPass', newPass);
+        document.getElementById("settingPass").value = "";
+        alert("Studio settings and new Admin Password saved successfully!");
+      } else {
+        alert("Studio settings saved successfully!");
+      }
+    }
+
+    // Export Backup JSON
+    function exportBackup() {
+      const backupData = {
+        invoices: JSON.parse(localStorage.getItem('keshavInvoices_nongst')) || [],
+        logo: localStorage.getItem('keshavLogo') || '',
+        adminPass: localStorage.getItem('keshavAdminPass') || '1234',
+        exportDate: new Date().toLocaleString()
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `KeshavPhotoArts_Backup_${new Date().toISOString().slice(0,10)}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    // Import Backup JSON
+    function importBackup(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        try {
+          const data = JSON.parse(e.target.result);
+          if (data.invoices) localStorage.setItem('keshavInvoices_nongst', JSON.stringify(data.invoices));
+          if (data.logo) localStorage.setItem('keshavLogo', data.logo);
+          if (data.adminPass) localStorage.setItem('keshavAdminPass', data.adminPass);
+
+          alert("Data Backup Restored Successfully!");
+          location.reload();
+        } catch (err) {
+          alert("Invalid backup file format!");
+        }
+      };
+      reader.readAsText(file);
+    }
+  </script>
+</body>
+</html>
